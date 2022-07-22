@@ -5,7 +5,8 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
 } from 'firebase/auth';
-
+// db access functions
+import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
 // Your web app's Firebase configuration
 const firebaseConfig = {
   // dont worry about exposing this key
@@ -24,6 +25,27 @@ const provider = new GoogleAuthProvider();
 // specfify type of auth
 provider.setCustomParameters({ prompt: 'select_account' });
 // create auth instance
-export const auth = getAuth(); // only 1 auth inst for entire app!
+export const auth = getAuth(); // keeps track of auth state in entire app
 // google sign in with pop up function
 export const signInWithGooglePopup = () => signInWithPopup(auth, provider);
+export const signInWithGoogleRedirect = () =>
+  signInWithRedirect(auth, provider);
+const db = getFirestore(); // points to our db on firebase
+// create document and add to our db
+export const createUserDocumentFromAuth = async (userAuth) => {
+  const userDocRef = doc(db, 'users', userAuth.uid);
+  // snapshot allows us to check is user exists in db and access it's data
+  const userSnapShot = await getDoc(userDocRef);
+  // if user does not exist, create userDoc in db
+  if (!userSnapShot.exists()) {
+    const { displayName, email } = userAuth;
+    const createdAt = new Date();
+    try {
+      await setDoc(userDocRef, { displayName, email, createdAt });
+    } catch (error) {
+      console.log('error creating user', error);
+    }
+  }
+  // if user exists in db, return userDocRef
+  return userDocRef;
+};
